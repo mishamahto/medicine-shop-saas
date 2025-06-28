@@ -182,7 +182,7 @@ const Inventory = () => {
   };
 
   // Filter inventory
-  const filteredInventory = Array.isArray(inventory?.data) ? inventory.data.filter(item => {
+  const filteredInventory = Array.isArray(inventory?.data?.data) ? inventory.data.data.filter(item => {
     const matchesSearch = (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (item.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (item.manufacturer || '').toLowerCase().includes(searchTerm.toLowerCase());
