@@ -3,7 +3,7 @@ services:
     name: medicine-shop-saas
     env: node
     plan: free
-    buildCommand: npm run render-build
+    buildCommand: ./build.sh
     startCommand: npm start
     envVars:
       - key: NODE_ENV
