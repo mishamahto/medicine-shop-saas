@@ -3,7 +3,7 @@ services:
     name: medicine-shop-saas
     env: node
     plan: free
-    buildCommand: npm run install-all
+    buildCommand: npm run render-build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -11,4 +11,10 @@ services:
       - key: PORT
         value: 10000
     healthCheckPath: /api/health
-    autoDeploy: true 
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - client/**
+        - server/**
+        - package.json
+        - package-lock.json 
