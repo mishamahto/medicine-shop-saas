@@ -49,10 +49,35 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build/index.html'));
-  });
+  // Check if the build directory exists
+  const buildPath = path.join(__dirname, '../client/build');
+  if (require('fs').existsSync(buildPath)) {
+    app.use(express.static(buildPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(buildPath, 'index.html'));
+    });
+  } else {
+    // Fallback for when build doesn't exist
+    app.get('/', (req, res) => {
+      res.json({ 
+        message: 'Medicine Shop SaaS API is running!',
+        status: 'API only mode - React build not found',
+        endpoints: {
+          auth: '/api/auth',
+          inventory: '/api/inventory',
+          purchaseOrders: '/api/purchase-orders',
+          invoices: '/api/invoices',
+          bills: '/api/bills',
+          customers: '/api/customers',
+          staff: '/api/staff',
+          wholesalers: '/api/wholesalers',
+          categories: '/api/categories',
+          dashboard: '/api/dashboard',
+          health: '/api/health'
+        }
+      });
+    });
+  }
 }
 
 // Error handling middleware
