@@ -1,83 +1,48 @@
 # Medicine Shop SaaS Application
 
-A comprehensive SaaS application for medicine shops and pharmacies to manage inventory, purchase orders, invoices, billing, and customer relationships.
+A comprehensive SaaS application for medicine shops to manage inventory, purchase orders, invoices, bills, and contacts (customers, wholesalers, staff).
 
-## Features
+## 🚀 Features
 
-### 🏥 Core Management
-- **Inventory Management**: Track medicine stock, expiry dates, low stock alerts
-- **Purchase Orders**: Order from wholesalers with status tracking
-- **Invoicing**: Create customer bills with automatic inventory updates
-- **Daily Bills**: Track daily expenses and vendor payments
+- **Inventory Management**: Track medicines, stock levels, expiry dates, low stock alerts
+- **Purchase Orders**: Create and manage orders from wholesalers
+- **Invoices**: Generate and manage customer invoices
+- **Bills**: Track and manage vendor bills
+- **Contacts**: Unified management of customers, wholesalers, and staff
+- **Dashboard**: Real-time statistics and analytics
+- **Authentication**: Secure JWT-based authentication
+- **Responsive UI**: Modern React interface with Tailwind CSS
 
-### 👥 Contact Management
-- **Customer Management**: Store customer contacts and purchase history
-- **Staff Management**: Employee records with positions and salaries
-- **Wholesaler Management**: Supplier contacts and payment terms
+## 🛠️ Tech Stack
 
-### 📊 Analytics & Reporting
-- **Dashboard**: Real-time statistics and recent activity
-- **Sales Analytics**: Revenue tracking and payment status
-- **Inventory Reports**: Stock levels and expiry monitoring
-- **Purchase Statistics**: Order tracking and supplier analysis
+- **Backend**: Node.js, Express.js, SQLite
+- **Frontend**: React.js, React Query, Tailwind CSS
+- **Authentication**: JWT, bcrypt
+- **Database**: SQLite with automatic initialization
+- **Security**: Helmet, CORS, Rate Limiting
 
-### 🔐 Security & Authentication
-- **JWT Authentication**: Secure login with role-based access
-- **User Management**: Admin and staff roles
-- **Password Security**: Bcrypt hashing for passwords
-
-## Technology Stack
-
-### Backend
-- **Node.js** with Express.js
-- **SQLite** database for data persistence
-- **JWT** for authentication
-- **bcryptjs** for password hashing
-
-### Frontend
-- **React 18** with functional components
-- **React Router** for navigation
-- **React Query** for data fetching
-- **Tailwind CSS** for styling
-- **Lucide React** for icons
-- **React Hook Form** for form management
-
-## Quick Start
+## 📦 Installation
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+- Node.js >= 16.0.0
+- npm >= 8.0.0
 
-### Installation
+### Local Development
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/mishamahto/medicine-shop-saas.git
    cd medicine-shop-saas
    ```
 
 2. **Install dependencies**
    ```bash
-   # Install backend dependencies
-   npm install
-   
-   # Install frontend dependencies
-   cd client
-   npm install
-   cd ..
+   npm run install-all
    ```
 
-3. **Start the application**
+3. **Start development servers**
    ```bash
-   # Start both backend and frontend (recommended)
    npm run dev
-   
-   # Or start them separately:
-   # Backend only
-   npm run server
-   
-   # Frontend only
-   npm run client
    ```
 
 4. **Access the application**
@@ -85,99 +50,162 @@ A comprehensive SaaS application for medicine shops and pharmacies to manage inv
    - Backend API: http://localhost:5000
 
 ### Default Login Credentials
-- **Username**: admin
-- **Password**: admin123
+- Username: `admin`
+- Password: `admin123`
 
-## API Endpoints
+## 🚀 Deployment Options
+
+### Option 1: Railway (Recommended)
+
+1. **Fork/Clone this repository**
+2. **Go to [Railway.app](https://railway.app)**
+3. **Sign up with GitHub**
+4. **Click "New Project" → "Deploy from GitHub repo"**
+5. **Select your repository**
+6. **Railway will automatically detect and deploy your app**
+
+**Environment Variables (Optional):**
+```env
+NODE_ENV=production
+JWT_SECRET=your_jwt_secret_here
+```
+
+### Option 2: Render
+
+1. **Go to [Render.com](https://render.com)**
+2. **Sign up and create a new Web Service**
+3. **Connect your GitHub repository**
+4. **Configure:**
+   - Build Command: `npm run install-all`
+   - Start Command: `npm start`
+   - Environment: Node
+
+### Option 3: Heroku
+
+1. **Install Heroku CLI**
+2. **Create Heroku app:**
+   ```bash
+   heroku create your-app-name
+   ```
+3. **Deploy:**
+   ```bash
+   git push heroku main
+   ```
+
+### Option 4: Vercel
+
+1. **Go to [Vercel.com](https://vercel.com)**
+2. **Import your GitHub repository**
+3. **Configure build settings:**
+   - Build Command: `npm run build`
+   - Output Directory: `client/build`
+   - Install Command: `npm run install-all`
+
+## 📁 Project Structure
+
+```
+medicine-shop-saas/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/     # Reusable components
+│   │   ├── pages/         # Page components
+│   │   ├── services/      # API services
+│   │   └── contexts/      # React contexts
+│   └── public/            # Static files
+├── server/                # Node.js backend
+│   ├── routes/            # API routes
+│   ├── middleware/        # Custom middleware
+│   ├── database/          # Database setup
+│   └── index.js           # Server entry point
+├── package.json           # Root package.json
+└── README.md             # This file
+```
+
+## 🔧 API Endpoints
 
 ### Authentication
 - `POST /api/auth/login` - User login
 - `POST /api/auth/register` - User registration
 - `GET /api/auth/me` - Get current user
-- `PUT /api/auth/change-password` - Change password
 
 ### Inventory
 - `GET /api/inventory` - Get all inventory items
 - `POST /api/inventory` - Create new item
 - `PUT /api/inventory/:id` - Update item
 - `DELETE /api/inventory/:id` - Delete item
-- `PATCH /api/inventory/:id/stock` - Update stock quantity
 
 ### Purchase Orders
 - `GET /api/purchase-orders` - Get all orders
 - `POST /api/purchase-orders` - Create new order
 - `PATCH /api/purchase-orders/:id/status` - Update order status
-- `POST /api/purchase-orders/:id/receive` - Receive items
 
 ### Invoices
 - `GET /api/invoices` - Get all invoices
 - `POST /api/invoices` - Create new invoice
 - `PATCH /api/invoices/:id/status` - Update invoice status
-- `POST /api/invoices/:id/pay` - Mark as paid
 
 ### Bills
 - `GET /api/bills` - Get all bills
 - `POST /api/bills` - Create new bill
 - `PUT /api/bills/:id` - Update bill
-- `DELETE /api/bills/:id` - Delete bill
 
 ### Contacts
 - `GET /api/customers` - Get all customers
-- `GET /api/staff` - Get all staff
 - `GET /api/wholesalers` - Get all wholesalers
+- `GET /api/staff` - Get all staff
 
-## Database Schema
+## 🔒 Security Features
+
+- JWT-based authentication
+- Password hashing with bcrypt
+- CORS protection
+- Rate limiting
+- Helmet security headers
+- Input validation and sanitization
+
+## 📊 Database Schema
 
 The application uses SQLite with the following main tables:
-- `users` - Authentication and user management
-- `inventory` - Medicine inventory with expiry tracking
-- `purchase_orders` - Orders from wholesalers
-- `invoices` - Customer sales and billing
-- `bills` - Daily expenses and vendor payments
-- `customers` - Customer contact information
-- `staff` - Employee records
-- `wholesalers` - Supplier information
+- `users` - User authentication
+- `inventory` - Medicine inventory
+- `purchase_orders` - Purchase orders
+- `invoices` - Customer invoices
+- `bills` - Vendor bills
+- `customers` - Customer information
+- `wholesalers` - Wholesaler information
+- `staff` - Staff information
+- `categories` - Medicine categories
 
-## Development
-
-### Project Structure
-```
-medicine-shop-saas/
-├── server/                 # Backend Node.js/Express
-│   ├── database/          # Database initialization
-│   ├── middleware/        # Authentication middleware
-│   ├── routes/           # API routes
-│   └── index.js          # Server entry point
-├── client/                # Frontend React application
-│   ├── src/
-│   │   ├── components/   # Reusable components
-│   │   ├── contexts/     # React contexts
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API services
-│   │   └── App.js        # Main app component
-│   └── public/           # Static files
-└── package.json          # Root package.json
-```
-
-### Available Scripts
-- `npm run dev` - Start both backend and frontend
-- `npm run server` - Start backend only
-- `npm run client` - Start frontend only
-- `npm run build` - Build frontend for production
-- `npm run install-all` - Install all dependencies
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## License
+## 📝 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🆘 Support
 
-For support and questions, please open an issue in the repository. 
+If you encounter any issues or have questions:
+1. Check the [Issues](https://github.com/mishamahto/medicine-shop-saas/issues) page
+2. Create a new issue with detailed information
+3. Contact the maintainers
+
+## 🎯 Roadmap
+
+- [ ] Multi-tenant architecture
+- [ ] Advanced reporting and analytics
+- [ ] Mobile app (React Native)
+- [ ] Email notifications
+- [ ] Barcode scanning
+- [ ] Integration with payment gateways
+- [ ] Backup and restore functionality
+- [ ] Multi-language support
+
+---
+
+**Built with ❤️ for medicine shops worldwide** 

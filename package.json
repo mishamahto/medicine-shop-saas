@@ -9,7 +9,13 @@
     "client": "cd client && npm start",
     "build": "cd client && npm run build",
     "install-all": "npm install && cd client && npm install",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "postinstall": "npm run build",
+    "deploy": "npm run build && npm start"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
   },
   "keywords": ["medicine", "pharmacy", "inventory", "billing", "saas"],
   "author": "Medicine Shop SaaS",

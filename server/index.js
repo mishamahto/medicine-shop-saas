@@ -35,6 +35,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const db = require('./database/init');
 
 // Routes
+app.use('/api/health', require('./routes/health'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/purchase-orders', require('./routes/purchaseOrders'));
