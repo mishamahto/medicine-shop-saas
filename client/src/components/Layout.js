@@ -8,8 +8,6 @@ import {
   FileText,
   Receipt,
   Users,
-  UserCheck,
-  Truck,
   Menu,
   X,
   LogOut,

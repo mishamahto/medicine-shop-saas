@@ -7,7 +7,6 @@ import {
   Edit, 
   Trash2, 
   Receipt,
-  Calendar,
   DollarSign,
   Filter,
   TrendingUp,

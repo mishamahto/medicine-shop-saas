@@ -7,10 +7,8 @@ import {
   Edit, 
   Trash2, 
   FileText,
-  Calendar,
   DollarSign,
   Filter,
-  TrendingUp,
   AlertCircle,
   CreditCard,
   CheckCircle,
@@ -24,7 +22,6 @@ const Invoices = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -207,8 +204,7 @@ const Invoices = () => {
                          (invoice.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !selectedStatus || invoice.status === selectedStatus;
     const matchesCustomer = !selectedCustomer || invoice.customer_id === parseInt(selectedCustomer);
-    const matchesDateRange = (!startDate || invoice.invoice_date >= startDate) && 
-                            (!endDate || invoice.invoice_date <= endDate);
+    const matchesDateRange = (!startDate || invoice.invoice_date >= startDate);
     return matchesSearch && matchesStatus && matchesCustomer && matchesDateRange;
   }) : [];
 

@@ -47,7 +47,7 @@ const Inventory = () => {
   }
 
   // Fetch categories
-  const { data: categories, isLoading: categoriesLoading, error: categoriesError, refetch: refetchCategories } = useQuery('categories', () =>
+  const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useQuery('categories', () =>
     categoriesAPI.getAll(),
     {
       staleTime: 5 * 60 * 1000, // 5 minutes

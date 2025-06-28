@@ -7,10 +7,8 @@ import {
   Edit, 
   Trash2, 
   ShoppingCart,
-  Calendar,
   DollarSign,
   Filter,
-  TrendingUp,
   AlertCircle,
   Package,
   CheckCircle,
@@ -24,7 +22,6 @@ const PurchaseOrders = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedWholesaler, setSelectedWholesaler] = useState('');
   const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
@@ -209,8 +206,7 @@ const PurchaseOrders = () => {
                          (po.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !selectedStatus || po.status === selectedStatus;
     const matchesWholesaler = !selectedWholesaler || po.wholesaler_id === parseInt(selectedWholesaler);
-    const matchesDateRange = (!startDate || po.order_date >= startDate) && 
-                            (!endDate || po.order_date <= endDate);
+    const matchesDateRange = (!startDate || po.order_date >= startDate);
     return matchesSearch && matchesStatus && matchesWholesaler && matchesDateRange;
   }) : [];
 
