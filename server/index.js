@@ -49,14 +49,31 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  // Check if the build directory exists
-  const buildPath = path.join(__dirname, '../client/build');
-  if (require('fs').existsSync(buildPath)) {
+  // Check multiple possible build paths for Vercel deployment
+  const possibleBuildPaths = [
+    path.join(__dirname, '../client/build'),
+    path.join(__dirname, '../../client/build'),
+    path.join(__dirname, 'client/build'),
+    path.join(__dirname, '../build'),
+    path.join(__dirname, 'build')
+  ];
+  
+  let buildPath = null;
+  for (const buildDir of possibleBuildPaths) {
+    if (require('fs').existsSync(buildDir)) {
+      buildPath = buildDir;
+      break;
+    }
+  }
+  
+  if (buildPath) {
+    console.log(`Serving static files from: ${buildPath}`);
     app.use(express.static(buildPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(buildPath, 'index.html'));
     });
   } else {
+    console.log('React build not found, serving API only');
     // Fallback for when build doesn't exist
     app.get('/', (req, res) => {
       res.json({ 
