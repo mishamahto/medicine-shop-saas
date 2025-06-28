@@ -108,3 +108,10 @@ client/build/
 # Server logs
 server/logs/
 *.log
+
+# Production builds
+client/build/
+build/
+
+# dotenv environment variables file
+.env
