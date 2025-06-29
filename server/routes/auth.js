@@ -46,8 +46,59 @@ router.post('/login', (req, res) => {
   });
 });
 
-// Register route
-router.post('/register', authenticateToken, (req, res) => {
+// Setup route - create first admin user (no auth required)
+router.post('/setup', (req, res) => {
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ success: false, message: 'All fields are required' });
+  }
+
+  // Check if any users exist
+  db.get('SELECT COUNT(*) as count FROM users', (err, result) => {
+    if (err) {
+      return res.status(500).json({ success: false, message: 'Database error' });
+    }
+
+    if (result.count > 0) {
+      return res.status(403).json({ success: false, message: 'Setup already completed. Use registration instead.' });
+    }
+
+    // Hash password
+    bcrypt.hash(password, 10, (err, hashedPassword) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: 'Error hashing password' });
+      }
+
+      // Insert first admin user
+      db.run(
+        'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+        [username, email, hashedPassword, 'admin'],
+        function(err) {
+          if (err) {
+            return res.status(500).json({ success: false, message: 'Error creating admin user' });
+          }
+
+          const token = generateToken({ id: this.lastID, username, email, role: 'admin' });
+          res.json({
+            success: true,
+            message: 'Admin user created successfully',
+            token,
+            user: {
+              id: this.lastID,
+              username,
+              email,
+              role: 'admin'
+            }
+          });
+        }
+      );
+    });
+  });
+});
+
+// Register route - now public for initial setup
+router.post('/register', (req, res) => {
   const { username, email, password, role = 'staff' } = req.body;
 
   if (!username || !email || !password) {
@@ -79,10 +130,17 @@ router.post('/register', authenticateToken, (req, res) => {
             return res.status(500).json({ success: false, message: 'Error creating user' });
           }
 
+          const token = generateToken({ id: this.lastID, username, email, role });
           res.json({
             success: true,
             message: 'User created successfully',
-            userId: this.lastID
+            token,
+            user: {
+              id: this.lastID,
+              username,
+              email,
+              role
+            }
           });
         }
       );
