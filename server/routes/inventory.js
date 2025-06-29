@@ -94,6 +94,12 @@ router.post('/', authenticateToken, (req, res) => {
   // Generate SKU if not provided
   const finalSku = sku || `SKU-${uuidv4().substring(0, 8).toUpperCase()}`;
 
+  console.log('Creating inventory item with data:', {
+    name, generic_name, category_id, manufacturer, strength,
+    dosage_form, pack_size, barcode, finalSku, cost_price,
+    selling_price, quantity, reorder_level, expiry_date, location
+  });
+
   db.run(`
     INSERT INTO inventory (
       name, generic_name, category_id, manufacturer, strength, 
@@ -106,7 +112,8 @@ router.post('/', authenticateToken, (req, res) => {
     selling_price, quantity || 0, reorder_level || 10, expiry_date, location
   ], function(err) {
     if (err) {
-      return res.status(500).json({ success: false, message: 'Error creating inventory item' });
+      console.error('Database error creating inventory item:', err);
+      return res.status(500).json({ success: false, message: 'Error creating inventory item', error: err.message });
     }
 
     res.json({
