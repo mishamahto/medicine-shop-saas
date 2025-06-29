@@ -135,7 +135,7 @@ const Inventory = () => {
     setSelectedItem(item);
     setFormData({
       name: item.name,
-      description: item.description,
+      description: item.generic_name || '',
       category_id: item.category_id,
       selling_price: item.selling_price,
       cost_price: item.cost_price,
@@ -143,7 +143,7 @@ const Inventory = () => {
       reorder_level: item.reorder_level,
       expiry_date: item.expiry_date ? item.expiry_date.split('T')[0] : '',
       manufacturer: item.manufacturer,
-      batch_number: item.batch_number
+      batch_number: item.barcode || ''
     });
     setShowEditModal(true);
   };
@@ -159,10 +159,30 @@ const Inventory = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Map frontend fields to backend API fields
+    const apiData = {
+      name: formData.name,
+      generic_name: formData.description, // Map description to generic_name
+      category_id: formData.category_id,
+      manufacturer: formData.manufacturer,
+      strength: '', // Add default values for missing fields
+      dosage_form: '',
+      pack_size: '',
+      barcode: formData.batch_number || '', // Map batch_number to barcode
+      sku: '',
+      cost_price: formData.cost_price,
+      selling_price: formData.selling_price,
+      quantity: formData.quantity || 0,
+      reorder_level: formData.reorder_level || 10,
+      expiry_date: formData.expiry_date,
+      location: ''
+    };
+    
     if (showEditModal) {
-      updateItemMutation.mutate({ id: selectedItem.id, ...formData });
+      updateItemMutation.mutate({ id: selectedItem.id, ...apiData });
     } else {
-      addItemMutation.mutate(formData);
+      addItemMutation.mutate(apiData);
     }
   };
 
