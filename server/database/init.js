@@ -2,8 +2,10 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-// Create database file
-const dbPath = path.join(__dirname, 'medicine_shop.db');
+// Create database file in a writable location
+const dbPath = process.env.NODE_ENV === 'production' 
+  ? '/tmp/medicine_shop.db'  // Use /tmp for Vercel serverless
+  : path.join(__dirname, 'medicine_shop.db');
 const db = new sqlite3.Database(dbPath);
 
 // Initialize database tables
