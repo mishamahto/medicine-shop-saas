@@ -20,11 +20,24 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
-# Copy built files
-COPY --from=builder /app/build /usr/share/nginx/html
+# Create nginx temp directories and fix permissions
+RUN mkdir -p /var/cache/nginx \
+    && chown -R nginx:nginx /var/cache/nginx \
+    && mkdir -p /var/log/nginx \
+    && chown -R nginx:nginx /var/log/nginx \
+    && mkdir -p /var/run \
+    && chown -R nginx:nginx /var/run \
+    && chown -R nginx:nginx /etc/nginx
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built files
+COPY --from=builder /app/build /usr/share/nginx/html
+RUN chown -R nginx:nginx /usr/share/nginx/html
+
+# Switch to non-root user
+USER nginx
 
 # Expose port
 EXPOSE 8080
