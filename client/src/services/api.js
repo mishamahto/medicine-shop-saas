@@ -1,14 +1,13 @@
 import axios from 'axios';
 
-// Use relative URL for same-domain deployment (Vercel)
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
+const API_BASE_URL = process.env.NODE_ENV === 'production'
+  ? 'https://medicine-shop-backend-538104438280.us-central1.run.app/api'
+  : 'http://localhost:8080/api';
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  withCredentials: true,
 });
 
 // Request interceptor to add auth token
@@ -29,7 +28,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

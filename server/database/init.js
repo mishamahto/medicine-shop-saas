@@ -1,4 +1,3 @@
-const sqlite3 = require('sqlite3').verbose();
 const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
@@ -6,222 +5,187 @@ const bcrypt = require('bcryptjs');
 // Use PostgreSQL in production, SQLite in development
 const isProduction = process.env.NODE_ENV === 'production';
 
-let db;
 let pool;
 
-if (isProduction) {
-  // PostgreSQL for production (GCP Cloud SQL)
-  pool = new Pool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    ssl: { rejectUnauthorized: false },
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  });
+const connectWithRetry = async (retries = 5, delay = 5000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      if (isProduction) {
+        console.log('Attempting to connect to PostgreSQL database...');
+        console.log('DB_HOST:', process.env.DB_HOST);
+        console.log('DB_PORT:', process.env.DB_PORT);
+        console.log('DB_NAME:', process.env.DB_NAME);
+        console.log('DB_USER:', process.env.DB_USER);
+        
+        pool = new Pool({
+          host: '/cloudsql/galvanic-vim-464504-n5:us-central1:medicine-shop-db',
+          database: process.env.DB_NAME,
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 5000,
+        });
 
-  // Test the connection
-  pool.on('connect', () => {
-    console.log('Connected to PostgreSQL database');
-  });
-
-  pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
-  });
-} else {
-  // SQLite for development
-  const dbPath = path.join(__dirname, 'medicine_shop.db');
-  db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error('Error opening database:', err);
-    } else {
-      console.log('Connected to SQLite database');
+        // Test the connection
+        console.log('Testing database connection...');
+        await pool.query('SELECT 1');
+        console.log('Successfully connected to PostgreSQL database');
+        return pool;
+      } else {
+        throw new Error('Development mode not supported in production environment');
+      }
+    } catch (error) {
+      console.error(`Failed to connect to database (attempt ${i + 1}/${retries}):`, error.message);
+      console.error('Error details:', error);
+      if (i === retries - 1) throw error;
+      console.log(`Waiting ${delay}ms before retrying...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-  });
-}
+  }
+};
 
 // Initialize database tables
 const initDatabase = async () => {
   try {
-    if (isProduction) {
-      // PostgreSQL initialization
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          username VARCHAR(255) UNIQUE NOT NULL,
-          email VARCHAR(255) UNIQUE NOT NULL,
-          password VARCHAR(255) NOT NULL,
-          role VARCHAR(50) DEFAULT 'admin',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
+    console.log('Starting database initialization...');
+    await connectWithRetry();
+    console.log('Database connection established, creating tables...');
+    
+    // Create users table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'admin',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS inventory (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          description TEXT,
-          category VARCHAR(100),
-          quantity INTEGER DEFAULT 0,
-          unit_price DECIMAL(10,2) DEFAULT 0.00,
-          supplier VARCHAR(255),
-          expiry_date DATE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
+    // Create inventory table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS inventory (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        quantity INTEGER NOT NULL DEFAULT 0,
+        unit_price DECIMAL(10,2) NOT NULL,
+        category_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS contacts (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(255) NOT NULL,
-          email VARCHAR(255),
-          phone VARCHAR(50),
-          address TEXT,
-          type VARCHAR(50) NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
+    // Create categories table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS invoices (
-          id SERIAL PRIMARY KEY,
-          invoice_number VARCHAR(100) UNIQUE NOT NULL,
-          customer_id INTEGER REFERENCES contacts(id),
-          total_amount DECIMAL(10,2) DEFAULT 0.00,
-          status VARCHAR(50) DEFAULT 'pending',
-          due_date DATE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
+    // Create customers table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255),
+        phone VARCHAR(20),
+        address TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS bills (
-          id SERIAL PRIMARY KEY,
-          bill_number VARCHAR(100) UNIQUE NOT NULL,
-          supplier_id INTEGER REFERENCES contacts(id),
-          total_amount DECIMAL(10,2) DEFAULT 0.00,
-          status VARCHAR(50) DEFAULT 'pending',
-          due_date DATE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
+    // Create invoices table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invoices (
+        id SERIAL PRIMARY KEY,
+        customer_id INTEGER REFERENCES customers(id),
+        total_amount DECIMAL(10,2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS purchase_orders (
-          id SERIAL PRIMARY KEY,
-          po_number VARCHAR(100) UNIQUE NOT NULL,
-          supplier_id INTEGER REFERENCES contacts(id),
-          total_amount DECIMAL(10,2) DEFAULT 0.00,
-          status VARCHAR(50) DEFAULT 'pending',
-          expected_delivery DATE,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
+    // Create invoice_items table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS invoice_items (
+        id SERIAL PRIMARY KEY,
+        invoice_id INTEGER REFERENCES invoices(id),
+        item_id INTEGER REFERENCES inventory(id),
+        quantity INTEGER NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-      console.log('PostgreSQL database tables initialized successfully');
-    } else {
-      // SQLite initialization (existing code)
-      db.serialize(() => {
-        // Create users table
-        db.run(`CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT UNIQUE NOT NULL,
-          email TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          role TEXT DEFAULT 'admin',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+    // Create purchase_orders table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id SERIAL PRIMARY KEY,
+        supplier_id INTEGER,
+        total_amount DECIMAL(10,2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-        // Create inventory table
-        db.run(`CREATE TABLE IF NOT EXISTS inventory (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          description TEXT,
-          category TEXT,
-          quantity INTEGER DEFAULT 0,
-          unit_price REAL DEFAULT 0.00,
-          supplier TEXT,
-          expiry_date DATE,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+    // Create purchase_order_items table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS purchase_order_items (
+        id SERIAL PRIMARY KEY,
+        purchase_order_id INTEGER REFERENCES purchase_orders(id),
+        item_id INTEGER REFERENCES inventory(id),
+        quantity INTEGER NOT NULL,
+        unit_price DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-        // Create contacts table
-        db.run(`CREATE TABLE IF NOT EXISTS contacts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          email TEXT,
-          phone TEXT,
-          address TEXT,
-          type TEXT NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+    // Create bills table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bills (
+        id SERIAL PRIMARY KEY,
+        supplier_id INTEGER,
+        amount DECIMAL(10,2) NOT NULL,
+        due_date DATE,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-        // Create invoices table
-        db.run(`CREATE TABLE IF NOT EXISTS invoices (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          invoice_number TEXT UNIQUE NOT NULL,
-          customer_id INTEGER,
-          total_amount REAL DEFAULT 0.00,
-          status TEXT DEFAULT 'pending',
-          due_date DATE,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (customer_id) REFERENCES contacts (id)
-        )`);
+    console.log('Database tables created successfully');
 
-        // Create bills table
-        db.run(`CREATE TABLE IF NOT EXISTS bills (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          bill_number TEXT UNIQUE NOT NULL,
-          supplier_id INTEGER,
-          total_amount REAL DEFAULT 0.00,
-          status TEXT DEFAULT 'pending',
-          due_date DATE,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (supplier_id) REFERENCES contacts (id)
-        )`);
+    // Create default admin user if it doesn't exist
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-        // Create purchase orders table
-        db.run(`CREATE TABLE IF NOT EXISTS purchase_orders (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          po_number TEXT UNIQUE NOT NULL,
-          supplier_id INTEGER,
-          total_amount REAL DEFAULT 0.00,
-          status TEXT DEFAULT 'pending',
-          expected_delivery DATE,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (supplier_id) REFERENCES contacts (id)
-        )`);
+    await pool.query(`
+      INSERT INTO users (username, email, password, role)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (username) DO NOTHING
+    `, ['admin', 'admin@example.com', hashedPassword, 'admin']);
 
-        console.log('SQLite database tables initialized successfully');
-      });
-    }
+    console.log('Database initialization complete');
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Database initialization failed:', error);
     throw error;
   }
 };
 
-// Initialize database on module load
-initDatabase().catch(console.error);
-
-// Export the appropriate database interface
-if (isProduction) {
-  module.exports = { pool, initDatabase };
-} else {
-  module.exports = { db, initDatabase };
-} 
+module.exports = {
+  initDatabase,
+  getPool: () => pool
+}; 

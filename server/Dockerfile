@@ -10,7 +10,10 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy source code
-COPY . .
+COPY index.js ./
+COPY routes/ ./routes/
+COPY database/ ./database/
+COPY middleware/ ./middleware/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
