@@ -209,3 +209,7 @@ If you encounter any issues or have questions:
 ---
 
 **Built with ❤️ for medicine shops worldwide** 
+
+const dbPath = process.env.NODE_ENV === 'production' 
+  ? '/tmp/medicine_shop.db'  // ✅ Writable in Vercel
+  : path.join(__dirname, 'medicine_shop.db'); // ✅ Local development 

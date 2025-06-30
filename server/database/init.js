@@ -1,235 +1,227 @@
 const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-// Create database file in a writable location
-const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/tmp/medicine_shop.db'  // Use /tmp for Vercel serverless
-  : path.join(__dirname, 'medicine_shop.db');
-const db = new sqlite3.Database(dbPath);
+// Use PostgreSQL in production, SQLite in development
+const isProduction = process.env.NODE_ENV === 'production';
+
+let db;
+let pool;
+
+if (isProduction) {
+  // PostgreSQL for production (GCP Cloud SQL)
+  pool = new Pool({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    ssl: { rejectUnauthorized: false },
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+
+  // Test the connection
+  pool.on('connect', () => {
+    console.log('Connected to PostgreSQL database');
+  });
+
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+  });
+} else {
+  // SQLite for development
+  const dbPath = path.join(__dirname, 'medicine_shop.db');
+  db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('Error opening database:', err);
+    } else {
+      console.log('Connected to SQLite database');
+    }
+  });
+}
 
 // Initialize database tables
-const initDatabase = () => {
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      // Users table (for authentication)
-      db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT DEFAULT 'admin',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+const initDatabase = async () => {
+  try {
+    if (isProduction) {
+      // PostgreSQL initialization
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(255) UNIQUE NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          role VARCHAR(50) DEFAULT 'admin',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-      // Staff table
-      db.run(`CREATE TABLE IF NOT EXISTS staff (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        phone TEXT,
-        position TEXT,
-        salary REAL,
-        hire_date DATE,
-        status TEXT DEFAULT 'active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS inventory (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          description TEXT,
+          category VARCHAR(100),
+          quantity INTEGER DEFAULT 0,
+          unit_price DECIMAL(10,2) DEFAULT 0.00,
+          supplier VARCHAR(255),
+          expiry_date DATE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-      // Customers table
-      db.run(`CREATE TABLE IF NOT EXISTS customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT,
-        phone TEXT,
-        address TEXT,
-        customer_type TEXT DEFAULT 'retail',
-        total_purchases REAL DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS contacts (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(255),
+          phone VARCHAR(50),
+          address TEXT,
+          type VARCHAR(50) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-      // Wholesalers table
-      db.run(`CREATE TABLE IF NOT EXISTS wholesalers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT,
-        phone TEXT,
-        address TEXT,
-        contact_person TEXT,
-        payment_terms TEXT,
-        status TEXT DEFAULT 'active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS invoices (
+          id SERIAL PRIMARY KEY,
+          invoice_number VARCHAR(100) UNIQUE NOT NULL,
+          customer_id INTEGER REFERENCES contacts(id),
+          total_amount DECIMAL(10,2) DEFAULT 0.00,
+          status VARCHAR(50) DEFAULT 'pending',
+          due_date DATE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-      // Categories table
-      db.run(`CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS bills (
+          id SERIAL PRIMARY KEY,
+          bill_number VARCHAR(100) UNIQUE NOT NULL,
+          supplier_id INTEGER REFERENCES contacts(id),
+          total_amount DECIMAL(10,2) DEFAULT 0.00,
+          status VARCHAR(50) DEFAULT 'pending',
+          due_date DATE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-      // Inventory table
-      db.run(`CREATE TABLE IF NOT EXISTS inventory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        generic_name TEXT,
-        category_id INTEGER,
-        manufacturer TEXT,
-        strength TEXT,
-        dosage_form TEXT,
-        pack_size TEXT,
-        barcode TEXT UNIQUE,
-        sku TEXT UNIQUE,
-        cost_price REAL NOT NULL,
-        selling_price REAL NOT NULL,
-        quantity INTEGER DEFAULT 0,
-        reorder_level INTEGER DEFAULT 10,
-        expiry_date DATE,
-        location TEXT,
-        status TEXT DEFAULT 'active',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (category_id) REFERENCES categories (id)
-      )`);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS purchase_orders (
+          id SERIAL PRIMARY KEY,
+          po_number VARCHAR(100) UNIQUE NOT NULL,
+          supplier_id INTEGER REFERENCES contacts(id),
+          total_amount DECIMAL(10,2) DEFAULT 0.00,
+          status VARCHAR(50) DEFAULT 'pending',
+          expected_delivery DATE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-      // Purchase Orders table
-      db.run(`CREATE TABLE IF NOT EXISTS purchase_orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        po_number TEXT UNIQUE NOT NULL,
-        wholesaler_id INTEGER,
-        order_date DATE NOT NULL,
-        expected_delivery DATE,
-        total_amount REAL DEFAULT 0,
-        status TEXT DEFAULT 'pending',
-        notes TEXT,
-        created_by INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (wholesaler_id) REFERENCES wholesalers (id),
-        FOREIGN KEY (created_by) REFERENCES users (id)
-      )`);
+      console.log('PostgreSQL database tables initialized successfully');
+    } else {
+      // SQLite initialization (existing code)
+      db.serialize(() => {
+        // Create users table
+        db.run(`CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          role TEXT DEFAULT 'admin',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
 
-      // Purchase Order Items table
-      db.run(`CREATE TABLE IF NOT EXISTS purchase_order_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        purchase_order_id INTEGER,
-        inventory_id INTEGER,
-        quantity INTEGER NOT NULL,
-        unit_cost REAL NOT NULL,
-        total_cost REAL NOT NULL,
-        received_quantity INTEGER DEFAULT 0,
-        FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders (id),
-        FOREIGN KEY (inventory_id) REFERENCES inventory (id)
-      )`);
+        // Create inventory table
+        db.run(`CREATE TABLE IF NOT EXISTS inventory (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          description TEXT,
+          category TEXT,
+          quantity INTEGER DEFAULT 0,
+          unit_price REAL DEFAULT 0.00,
+          supplier TEXT,
+          expiry_date DATE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
 
-      // Invoices table
-      db.run(`CREATE TABLE IF NOT EXISTS invoices (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        invoice_number TEXT UNIQUE NOT NULL,
-        customer_id INTEGER,
-        invoice_date DATE NOT NULL,
-        due_date DATE,
-        subtotal REAL DEFAULT 0,
-        tax_amount REAL DEFAULT 0,
-        discount_amount REAL DEFAULT 0,
-        total_amount REAL DEFAULT 0,
-        status TEXT DEFAULT 'pending',
-        payment_method TEXT,
-        notes TEXT,
-        created_by INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (customer_id) REFERENCES customers (id),
-        FOREIGN KEY (created_by) REFERENCES users (id)
-      )`);
+        // Create contacts table
+        db.run(`CREATE TABLE IF NOT EXISTS contacts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT,
+          phone TEXT,
+          address TEXT,
+          type TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
 
-      // Invoice Items table
-      db.run(`CREATE TABLE IF NOT EXISTS invoice_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        invoice_id INTEGER,
-        inventory_id INTEGER,
-        quantity INTEGER NOT NULL,
-        unit_price REAL NOT NULL,
-        total_price REAL NOT NULL,
-        FOREIGN KEY (invoice_id) REFERENCES invoices (id),
-        FOREIGN KEY (inventory_id) REFERENCES inventory (id)
-      )`);
+        // Create invoices table
+        db.run(`CREATE TABLE IF NOT EXISTS invoices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          invoice_number TEXT UNIQUE NOT NULL,
+          customer_id INTEGER,
+          total_amount REAL DEFAULT 0.00,
+          status TEXT DEFAULT 'pending',
+          due_date DATE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (customer_id) REFERENCES contacts (id)
+        )`);
 
-      // Bills table (daily expenses)
-      db.run(`CREATE TABLE IF NOT EXISTS bills (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        bill_number TEXT UNIQUE NOT NULL,
-        bill_date DATE NOT NULL,
-        vendor_name TEXT,
-        category TEXT,
-        description TEXT,
-        amount REAL NOT NULL,
-        payment_status TEXT DEFAULT 'pending',
-        payment_method TEXT,
-        due_date DATE,
-        notes TEXT,
-        created_by INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by) REFERENCES users (id)
-      )`);
+        // Create bills table
+        db.run(`CREATE TABLE IF NOT EXISTS bills (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          bill_number TEXT UNIQUE NOT NULL,
+          supplier_id INTEGER,
+          total_amount REAL DEFAULT 0.00,
+          status TEXT DEFAULT 'pending',
+          due_date DATE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (supplier_id) REFERENCES contacts (id)
+        )`);
 
-      // Sales table (for tracking daily sales)
-      db.run(`CREATE TABLE IF NOT EXISTS sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        invoice_id INTEGER,
-        customer_id INTEGER,
-        sale_date DATE NOT NULL,
-        total_amount REAL NOT NULL,
-        payment_method TEXT,
-        created_by INTEGER,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (invoice_id) REFERENCES invoices (id),
-        FOREIGN KEY (customer_id) REFERENCES customers (id),
-        FOREIGN KEY (created_by) REFERENCES users (id)
-      )`);
+        // Create purchase orders table
+        db.run(`CREATE TABLE IF NOT EXISTS purchase_orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          po_number TEXT UNIQUE NOT NULL,
+          supplier_id INTEGER,
+          total_amount REAL DEFAULT 0.00,
+          status TEXT DEFAULT 'pending',
+          expected_delivery DATE,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (supplier_id) REFERENCES contacts (id)
+        )`);
 
-      // Insert default categories
-      const defaultCategories = [
-        'Antibiotics',
-        'Pain Relief',
-        'Vitamins & Supplements',
-        'Diabetes',
-        'Cardiovascular',
-        'Respiratory',
-        'Dermatology',
-        'Gastrointestinal',
-        'Neurology',
-        'Oncology',
-        'Other'
-      ];
-
-      // Clean up duplicate categories first
-      db.run(`DELETE FROM categories WHERE id NOT IN (
-        SELECT MIN(id) FROM categories GROUP BY name
-      )`);
-
-      defaultCategories.forEach(category => {
-        db.run('INSERT OR IGNORE INTO categories (name) VALUES (?)', [category]);
+        console.log('SQLite database tables initialized successfully');
       });
-
-      // Create default admin user
-      const defaultPassword = bcrypt.hashSync('admin123', 10);
-      db.run(`INSERT OR IGNORE INTO users (username, email, password, role) 
-              VALUES (?, ?, ?, ?)`, 
-              ['admin', 'admin@medicineshop.com', defaultPassword, 'admin']);
-
-      console.log('Database initialized successfully');
-      resolve();
-    });
-  });
+    }
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    throw error;
+  }
 };
 
 // Initialize database on module load
 initDatabase().catch(console.error);
 
-module.exports = db; 
+// Export the appropriate database interface
+if (isProduction) {
+  module.exports = { pool, initDatabase };
+} else {
+  module.exports = { db, initDatabase };
+} 
