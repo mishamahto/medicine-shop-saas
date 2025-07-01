@@ -72,8 +72,23 @@ app.use('*', (req, res) => {
 // Start the server if we're not in a serverless environment
 if (process.env.NODE_ENV !== 'aws-lambda') {
   const port = process.env.PORT || 8080;
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+  const server = app.listen(port, '0.0.0.0', () => {
+    console.log(`${new Date().toISOString()} - Server is running on port ${port}`);
+  });
+
+  // Handle server errors
+  server.on('error', (error) => {
+    console.error(`${new Date().toISOString()} - Server error:`, error);
+    process.exit(1);
+  });
+
+  // Handle process termination
+  process.on('SIGTERM', () => {
+    console.log(`${new Date().toISOString()} - SIGTERM received, shutting down gracefully`);
+    server.close(() => {
+      console.log(`${new Date().toISOString()} - Server closed`);
+      process.exit(0);
+    });
   });
 }
 
