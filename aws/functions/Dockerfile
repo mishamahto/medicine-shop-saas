@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 8080
 
 # Start both the proxy and the application
-CMD /cloud-sql-proxy --unix-socket /cloudsql medicine-shop-db & node api.js 
+CMD /cloud-sql-proxy --unix-socket /cloudsql galvanic-vim-464504-n5:us-central1:medicine-shop-db & node api.js 
