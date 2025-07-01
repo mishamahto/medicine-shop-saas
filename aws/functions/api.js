@@ -69,5 +69,13 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Export the serverless handler
+// Start the server if we're not in a serverless environment
+if (process.env.NODE_ENV !== 'aws-lambda') {
+  const port = process.env.PORT || 8080;
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}
+
+// Export the serverless handler for AWS Lambda
 module.exports.handler = serverless(app); 

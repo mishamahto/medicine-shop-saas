@@ -13,6 +13,8 @@ RUN npm install
 
 COPY . .
 
+# Make sure the application listens on the correct port
+ENV PORT=8080
 EXPOSE 8080
 
 # Start both the proxy and the application
