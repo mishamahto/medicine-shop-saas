@@ -1,26 +1,34 @@
 const { Pool } = require('pg');
 
-// Create connection pool
-const pool = new Pool({
-  host: process.env.NODE_ENV === 'production' ? '/cloudsql/medicine-shop-db' : process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  ssl: process.env.NODE_ENV === 'production' ? false : { rejectUnauthorized: false },
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-});
+let pool;
+
+if (process.env.NODE_ENV === 'production') {
+  // Production configuration using Unix socket
+  pool = new Pool({
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: '/cloudsql/galvanic-vim-464504-n5:us-central1:medicine-shop-db',
+    port: 5432
+  });
+} else {
+  // Local development configuration
+  pool = new Pool({
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT
+  });
+}
 
 // Test the connection
-pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
-});
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error:', err.stack);
+  } else {
+    console.log('Database connected successfully');
+  }
 });
 
 // Initialize database tables
@@ -121,4 +129,6 @@ const initDatabase = async () => {
 // Initialize database on module load
 initDatabase().catch(console.error);
 
-module.exports = { pool, initDatabase }; 
+module.exports = {
+  query: (text, params) => pool.query(text, params)
+}; 
