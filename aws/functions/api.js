@@ -15,6 +15,11 @@ const healthRoutes = require('./routes/health');
 
 const app = express();
 
+// Immediate health check endpoint
+app.get('/_health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
