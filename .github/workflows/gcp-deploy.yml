@@ -37,7 +37,8 @@ jobs:
           gcloud run deploy server \
             --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/server \
             --add-cloudsql-instances ${{ secrets.GCP_SQL_CONNECTION_NAME }} \
-            --set-env-vars DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},DB_NAME=medicine_shop,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},NODE_ENV=production \
+          host: '/cloudsql/galvanic-vim-464504-n5:us-central1:medicine-shop-db',
+            --set-env-vars DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},DB_NAME=medicine_shop,DB_USER=medicine-shop-user,DB_PASSWORD=${{ secrets.DB_PASSWORD }},NODE_ENV=production \
             --platform managed \
             --region us-central1 \
             --allow-unauthenticated

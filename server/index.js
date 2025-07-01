@@ -4,6 +4,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+console.log('--- ENVIRONMENT VARIABLES AT STARTUP ---');
+console.log(process.env);
+console.log('----------------------------------------');
+
 console.log('Starting server initialization...');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Database host:', process.env.DB_HOST);
