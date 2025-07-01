@@ -7,6 +7,14 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 let pool;
 
+const requiredEnvVars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+requiredEnvVars.forEach((key) => {
+  if (!process.env[key]) {
+    console.error(`FATAL: Required environment variable ${key} is not set.`);
+    throw new Error(`Required environment variable ${key} is not set.`);
+  }
+});
+
 const connectWithRetry = async (retries = 5, delay = 5000) => {
   for (let i = 0; i < retries; i++) {
     try {
@@ -37,6 +45,12 @@ const connectWithRetry = async (retries = 5, delay = 5000) => {
       }
     } catch (error) {
       console.error(`Failed to connect to database (attempt ${i + 1}/${retries}):`, error.message);
+      if (error.code === '28P01') {
+        console.error('FATAL: Invalid database credentials. Please check DB_USER and DB_PASSWORD.');
+      }
+      if (error.code === '3D000') {
+        console.error('FATAL: Database does not exist. Please check DB_NAME.');
+      }
       console.error('Error details:', error);
       if (i === retries - 1) throw error;
       console.log(`Waiting ${delay}ms before retrying...`);

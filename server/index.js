@@ -38,6 +38,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 console.log('Loading database module...');
 const db = require('./database/init');
 
+const requiredEnvVars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST'];
+requiredEnvVars.forEach((key) => {
+  if (!process.env[key]) {
+    console.error(`FATAL: Required environment variable ${key} is not set.`);
+    process.exit(1);
+  }
+});
+
 // Initialize database before starting server
 const startServer = async () => {
   try {
