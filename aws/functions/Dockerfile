@@ -1,5 +1,10 @@
 FROM node:18-alpine
 
+# Install Cloud SQL Auth Proxy
+RUN apk add --no-cache curl \
+    && curl -o /cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.6.1/cloud-sql-proxy.linux.amd64 \
+    && chmod +x /cloud-sql-proxy
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -10,4 +15,5 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["node", "api.js"] 
+# Start both the proxy and the application
+CMD /cloud-sql-proxy --unix-socket /cloudsql medicine-shop-db & node api.js 

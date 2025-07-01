@@ -2,12 +2,12 @@ const { Pool } = require('pg');
 
 // Create connection pool
 const pool = new Pool({
-  host: process.env.DB_HOST,
+  host: process.env.NODE_ENV === 'production' ? '/cloudsql/medicine-shop-db' : process.env.DB_HOST,
   port: process.env.DB_PORT || 5432,
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? false : { rejectUnauthorized: false },
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
   connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
