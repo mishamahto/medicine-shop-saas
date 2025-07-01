@@ -1,5 +1,4 @@
 const express = require('express');
-const serverless = require('serverless-http');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -25,8 +24,8 @@ app.use(cors({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
@@ -69,28 +68,21 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start the server if we're not in a serverless environment
-if (process.env.NODE_ENV !== 'aws-lambda') {
-  const port = process.env.PORT || 8080;
-  const server = app.listen(port, '0.0.0.0', () => {
-    console.log(`${new Date().toISOString()} - Server is running on port ${port}`);
-  });
+// Start the server — Cloud Run requires this
+const port = process.env.PORT || 8080;
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`${new Date().toISOString()} - Server is running on port ${port}`);
+});
 
-  // Handle server errors
-  server.on('error', (error) => {
-    console.error(`${new Date().toISOString()} - Server error:`, error);
-    process.exit(1);
-  });
+server.on('error', (error) => {
+  console.error(`${new Date().toISOString()} - Server error:`, error);
+  process.exit(1);
+});
 
-  // Handle process termination
-  process.on('SIGTERM', () => {
-    console.log(`${new Date().toISOString()} - SIGTERM received, shutting down gracefully`);
-    server.close(() => {
-      console.log(`${new Date().toISOString()} - Server closed`);
-      process.exit(0);
-    });
+process.on('SIGTERM', () => {
+  console.log(`${new Date().toISOString()} - SIGTERM received, shutting down gracefully`);
+  server.close(() => {
+    console.log(`${new Date().toISOString()} - Server closed`);
+    process.exit(0);
   });
-}
-
-// Export the serverless handler for AWS Lambda
-module.exports.handler = serverless(app); 
+});
