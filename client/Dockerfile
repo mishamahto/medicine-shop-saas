@@ -21,7 +21,17 @@ RUN npm run build
 FROM nginx:alpine
 
 # Create nginx temp directories and fix permissions
-RUN mkdir -p /var/cache/nginx \
+RUN mkdir -p /tmp/client_temp \
+    && mkdir -p /tmp/proxy_temp \
+    && mkdir -p /tmp/fastcgi_temp \
+    && mkdir -p /tmp/uwsgi_temp \
+    && mkdir -p /tmp/scgi_temp \
+    && chown -R nginx:nginx /tmp/client_temp \
+    && chown -R nginx:nginx /tmp/proxy_temp \
+    && chown -R nginx:nginx /tmp/fastcgi_temp \
+    && chown -R nginx:nginx /tmp/uwsgi_temp \
+    && chown -R nginx:nginx /tmp/scgi_temp \
+    && mkdir -p /var/cache/nginx \
     && chown -R nginx:nginx /var/cache/nginx \
     && mkdir -p /var/log/nginx \
     && chown -R nginx:nginx /var/log/nginx \
@@ -30,7 +40,8 @@ RUN mkdir -p /var/cache/nginx \
     && chown -R nginx:nginx /etc/nginx
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY default.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files
 COPY --from=builder /app/build /usr/share/nginx/html
