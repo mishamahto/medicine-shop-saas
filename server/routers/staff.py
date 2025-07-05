@@ -5,6 +5,7 @@ from database import get_db
 router = APIRouter()
 
 @router.get("/")
+@router.get("")
 async def get_staff(conn: asyncpg.Connection = Depends(get_db)):
     """Get all staff"""
     try:
