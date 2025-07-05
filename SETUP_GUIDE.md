@@ -30,7 +30,7 @@ I've added two new routes to fix this:
 ### **Option 1: Use the Setup Route (Recommended)**
 
 ```bash
-curl -X POST https://medicine-shop-saas.vercel.app/api/auth/setup \
+curl -X POST https://your-app-url.com/api/auth/setup \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -42,7 +42,7 @@ curl -X POST https://medicine-shop-saas.vercel.app/api/auth/setup \
 ### **Option 2: Use Registration**
 
 ```bash
-curl -X POST https://medicine-shop-saas.vercel.app/api/auth/register \
+curl -X POST https://your-app-url.com/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -54,7 +54,7 @@ curl -X POST https://medicine-shop-saas.vercel.app/api/auth/register \
 
 ### **Option 3: Use the Frontend**
 
-1. **Go to**: [https://medicine-shop-saas.vercel.app/](https://medicine-shop-saas.vercel.app/)
+1. **Go to**: [https://your-app-url.com/](https://your-app-url.com/)
 2. **Click "Register"** (if available)
 3. **Fill in the form** with your admin credentials
 4. **Login** with your new account
@@ -65,7 +65,7 @@ curl -X POST https://medicine-shop-saas.vercel.app/api/auth/register \
 
 ### **1. Create Admin User**
 ```bash
-curl -X POST https://medicine-shop-saas.vercel.app/api/auth/setup \
+curl -X POST https://your-app-url.com/api/auth/setup \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","email":"admin@example.com","password":"admin123"}'
 ```
@@ -87,7 +87,7 @@ curl -X POST https://medicine-shop-saas.vercel.app/api/auth/setup \
 
 ### **2. Test Login**
 ```bash
-curl -X POST https://medicine-shop-saas.vercel.app/api/auth/login \
+curl -X POST https://your-app-url.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 ```
@@ -95,7 +95,7 @@ curl -X POST https://medicine-shop-saas.vercel.app/api/auth/login \
 ### **3. Test Inventory Access**
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  https://medicine-shop-saas.vercel.app/api/inventory
+  https://your-app-url.com/api/inventory
 ```
 
 ---
@@ -104,7 +104,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
 
 Once you have a user account:
 
-1. **Login** to your app at [https://medicine-shop-saas.vercel.app/](https://medicine-shop-saas.vercel.app/)
+1. **Login** to your app at [https://your-app-url.com/](https://your-app-url.com/)
 2. **Navigate** to Inventory page
 3. **Add items** - should work now!
 4. **Test all features** - Dashboard, Purchase Orders, Invoices, etc.
@@ -115,7 +115,7 @@ Once you have a user account:
 
 ### **If Setup Fails:**
 - Check if the deployment has completed
-- Wait a few minutes for Vercel to deploy the changes
+- Wait a few minutes for your platform to deploy the changes
 - Try the registration route instead
 
 ### **If Login Fails:**

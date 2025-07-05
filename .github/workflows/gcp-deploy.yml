@@ -19,29 +19,32 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
-      - name: Set up Podman
-        run: |
-          sudo apt-get update && sudo apt-get install -y podman
+      - name: Set up Docker (instead of Podman for better GCP compatibility)
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build backend image
+      - name: Authenticate Docker to Google Cloud
         run: |
-          podman build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/server ./server
+          echo "${{ secrets.GCP_SA_KEY }}" | docker login -u _json_key --password-stdin https://gcr.io
 
-      - name: Push backend image
+      - name: Build backend Docker image
         run: |
-          podman login -u _json_key --password-stdin https://gcr.io <<< "${{ secrets.GCP_SA_KEY }}"
-          podman push gcr.io/${{ secrets.GCP_PROJECT_ID }}/server
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/server ./server
+
+      - name: Push Docker image to Container Registry
+        run: |
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/server
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy server \
             --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/server \
             --add-cloudsql-instances ${{ secrets.GCP_SQL_CONNECTION_NAME }} \
-          host: '/cloudsql/galvanic-vim-464504-n5:us-central1:medicine-shop-db',
-            --set-env-vars DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},DB_NAME=medicine_shop,DB_USER=medicine-shop-user,DB_PASSWORD=${{ secrets.DB_PASSWORD }},NODE_ENV=production \
+            --set-env-vars DB_HOST=/cloudsql/${{ secrets.GCP_SQL_CONNECTION_NAME }},DB_NAME=medicine_shop,DB_USER=medicine-shop-user,NODE_ENV=production \
+            --set-secrets DB_PASSWORD=db-password:latest,JWT_SECRET=jwt-secret:latest \
             --platform managed \
             --region us-central1 \
             --allow-unauthenticated
+
 
   build-and-deploy-frontend:
     runs-on: ubuntu-latest

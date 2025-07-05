@@ -53,53 +53,30 @@ A comprehensive SaaS application for medicine shops to manage inventory, purchas
 - Username: `admin`
 - Password: `admin123`
 
-## 🚀 Deployment Options
+## 🚀 Deployment
 
-### Option 1: Railway (Recommended)
+### Google Cloud Platform (GCP)
 
-1. **Fork/Clone this repository**
-2. **Go to [Railway.app](https://railway.app)**
-3. **Sign up with GitHub**
-4. **Click "New Project" → "Deploy from GitHub repo"**
-5. **Select your repository**
-6. **Railway will automatically detect and deploy your app**
+This application is configured for deployment on Google Cloud Platform using Cloud Run.
+
+**For detailed deployment instructions, see:**
+- [GCP_DEPLOYMENT.md](GCP_DEPLOYMENT.md) - Complete GCP deployment guide
+- [gcp-setup.sh](gcp-setup.sh) - Automated GCP setup script
+
+**Quick Start:**
+1. **Run the setup script:**
+   ```bash
+   chmod +x gcp-setup.sh
+   ./gcp-setup.sh
+   ```
+
+2. **Follow the GCP deployment guide** for detailed steps
 
 **Environment Variables (Optional):**
 ```env
 NODE_ENV=production
 JWT_SECRET=your_jwt_secret_here
 ```
-
-### Option 2: Render
-
-1. **Go to [Render.com](https://render.com)**
-2. **Sign up and create a new Web Service**
-3. **Connect your GitHub repository**
-4. **Configure:**
-   - Build Command: `npm run install-all`
-   - Start Command: `npm start`
-   - Environment: Node
-
-### Option 3: Heroku
-
-1. **Install Heroku CLI**
-2. **Create Heroku app:**
-   ```bash
-   heroku create your-app-name
-   ```
-3. **Deploy:**
-   ```bash
-   git push heroku main
-   ```
-
-### Option 4: Vercel
-
-1. **Go to [Vercel.com](https://vercel.com)**
-2. **Import your GitHub repository**
-3. **Configure build settings:**
-   - Build Command: `npm run build`
-   - Output Directory: `client/build`
-   - Install Command: `npm run install-all`
 
 ## 📁 Project Structure
 
@@ -211,5 +188,5 @@ If you encounter any issues or have questions:
 **Built with ❤️ for medicine shops worldwide** 
 
 const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/tmp/medicine_shop.db'  // ✅ Writable in Vercel
+  ? '/tmp/medicine_shop.db'  // ✅ Writable in production
   : path.join(__dirname, 'medicine_shop.db'); // ✅ Local development 
