@@ -27,8 +27,8 @@ const Inventory = () => {
     selling_price: '',
     cost_price: '',
     quantity: '',
-    reorder_level: '',
     expiry_date: '',
+    reorder_level: '10',
     manufacturer: '',
     batch_number: ''
   });
@@ -81,18 +81,21 @@ const Inventory = () => {
     }
   });
 
-  const updateItemMutation = useMutation(inventoryAPI.update, {
-    onSuccess: () => {
-      queryClient.invalidateQueries('inventory');
-      setShowEditModal(false);
-      setSelectedItem(null);
-      resetForm();
-      toast.success('Item updated successfully!');
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to update item');
+  const updateItemMutation = useMutation(
+    ({ id, data }) => inventoryAPI.update(id, data),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('inventory');
+        setShowEditModal(false);
+        setSelectedItem(null);
+        resetForm();
+        toast.success('Item updated successfully!');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to update item');
+      }
     }
-  });
+  );
 
   const deleteItemMutation = useMutation(inventoryAPI.delete, {
     onSuccess: () => {
@@ -124,8 +127,8 @@ const Inventory = () => {
       selling_price: '',
       cost_price: '',
       quantity: '',
-      reorder_level: '',
       expiry_date: '',
+      reorder_level: '10',
       manufacturer: '',
       batch_number: ''
     });
@@ -135,15 +138,15 @@ const Inventory = () => {
     setSelectedItem(item);
     setFormData({
       name: item.name,
-      description: item.generic_name || '',
+      description: item.description || '',
       category_id: item.category_id,
-      selling_price: item.selling_price,
-      cost_price: item.cost_price,
+      selling_price: item.unit_price || '', // Map unit_price to selling_price
+      cost_price: item.cost_price || '', // Map cost_price to cost_price
       quantity: item.quantity,
-      reorder_level: item.reorder_level,
       expiry_date: item.expiry_date ? item.expiry_date.split('T')[0] : '',
-      manufacturer: item.manufacturer,
-      batch_number: item.barcode || ''
+      reorder_level: item.reorder_level || '10',
+      manufacturer: item.manufacturer || '',
+      batch_number: item.batch_number || ''
     });
     setShowEditModal(true);
   };
@@ -163,24 +166,19 @@ const Inventory = () => {
     // Map frontend fields to backend API fields
     const apiData = {
       name: formData.name,
-      generic_name: formData.description, // Map description to generic_name
-      category_id: formData.category_id,
-      manufacturer: formData.manufacturer,
-      strength: '', // Add default values for missing fields
-      dosage_form: '',
-      pack_size: '',
-      barcode: formData.batch_number || '', // Map batch_number to barcode
-      sku: '',
-      cost_price: formData.cost_price,
-      selling_price: formData.selling_price,
-      quantity: formData.quantity || 0,
-      reorder_level: formData.reorder_level || 10,
-      expiry_date: formData.expiry_date,
-      location: ''
+      description: formData.description,
+      category_id: formData.category_id ? parseInt(formData.category_id) : null,
+      unit_price: parseFloat(formData.selling_price) || 0, // Map selling_price to unit_price
+      cost_price: parseFloat(formData.cost_price) || 0, // Map cost_price to cost_price
+      quantity: parseInt(formData.quantity) || 0,
+      expiry_date: formData.expiry_date || null,
+      reorder_level: parseInt(formData.reorder_level) || 10,
+      manufacturer: formData.manufacturer || null,
+      batch_number: formData.batch_number || null
     };
     
     if (showEditModal) {
-      updateItemMutation.mutate({ id: selectedItem.id, ...apiData });
+      updateItemMutation.mutate({ id: selectedItem.id, data: apiData });
     } else {
       addItemMutation.mutate(apiData);
     }
@@ -204,14 +202,13 @@ const Inventory = () => {
   // Filter inventory
   const filteredInventory = Array.isArray(inventory?.data?.data) ? inventory.data.data.filter(item => {
     const matchesSearch = (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (item.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (item.manufacturer || '').toLowerCase().includes(searchTerm.toLowerCase());
+                         (item.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !selectedCategory || String(item.category_id) === String(selectedCategory);
     return matchesSearch && matchesCategory;
   }) : [];
 
   // Check for low stock and expiry alerts
-  const lowStockItems = filteredInventory.filter(item => item.quantity <= item.reorder_level);
+  const lowStockItems = filteredInventory.filter(item => item.quantity <= (item.reorder_level || 10));
   const expiringItems = filteredInventory.filter(item => {
     if (!item.expiry_date) return false;
     const expiryDate = new Date(item.expiry_date);
@@ -336,7 +333,7 @@ const Inventory = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredInventory.map((item) => {
-                  const isLowStock = item.quantity <= item.reorder_level;
+                  const isLowStock = item.quantity <= (item.reorder_level || 10);
                   const isExpiring = item.expiry_date && new Date(item.expiry_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
                   
                   return (
@@ -346,7 +343,7 @@ const Inventory = () => {
                           <Package className="h-8 w-8 text-gray-400 mr-3" />
                           <div>
                             <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                            <div className="text-sm text-gray-500">{item.manufacturer}</div>
+                            <div className="text-sm text-gray-500">{item.description || 'No description'}</div>
                           </div>
                         </div>
                       </td>
@@ -363,15 +360,12 @@ const Inventory = () => {
                           )}
                         </div>
                         <div className="text-xs text-gray-500">
-                          Reorder: {item.reorder_level}
+                          Reorder: {item.reorder_level || 10}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          ₹{parseFloat(item.selling_price).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Cost: ₹{parseFloat(item.cost_price).toFixed(2)}
+                          ₹{parseFloat(item.unit_price || 0).toFixed(2)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -473,7 +467,6 @@ const Inventory = () => {
                   <input
                     type="number"
                     step="0.01"
-                    required
                     value={formData.cost_price}
                     onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -615,7 +608,6 @@ const Inventory = () => {
                   <input
                     type="number"
                     step="0.01"
-                    required
                     value={formData.cost_price}
                     onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"

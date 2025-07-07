@@ -6,6 +6,10 @@ import os
 import logging
 from typing import Optional
 import uvicorn
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import routers
 from routers import auth, inventory, customers, invoices, bills, purchase_orders, categories, staff, wholesalers, dashboard

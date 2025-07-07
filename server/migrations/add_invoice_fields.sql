@@ -1,0 +1,7 @@
+-- Add new columns to invoices table
+ALTER TABLE invoices
+ADD COLUMN IF NOT EXISTS payment_method TEXT,
+ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending',
+ADD COLUMN IF NOT EXISTS notes TEXT,
+ADD COLUMN IF NOT EXISTS total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS due_date DATE; 
