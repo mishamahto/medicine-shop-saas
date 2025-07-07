@@ -1,7 +1,8 @@
 import axios from 'axios';
 
+// API configuration
 const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://medicine-shop-fastapi-backend-538104438280.us-central1.run.app/api'
+  ? 'https://medicine-shop-backend-538104438280.us-central1.run.app/api'  // Added /api prefix
   : 'http://localhost:8080/api';
 
 // Create axios instance
@@ -128,4 +129,4 @@ export const dashboardAPI = {
   getInventoryChart: () => api.get('/dashboard/inventory-chart'),
 };
 
-export default api; 
+export default api;
